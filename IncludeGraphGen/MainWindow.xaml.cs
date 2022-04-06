@@ -79,7 +79,7 @@ namespace IncludeGraphGen
                     }
                 }
                 g_viewer = new Microsoft.Msagl.WpfGraphControl.GraphViewer();
-                dockPanel.Children.Remove(loading);
+                dockPanel.Children.Remove(loading);   
                 g_viewer.BindToPanel(dockPanel);
                 g_viewer.Graph = w_graph;
                 g_viewer.MouseDown += G_viewer_MouseDown;
@@ -87,6 +87,9 @@ namespace IncludeGraphGen
             }
             catch (Exception ex)
             {
+                dockPanel.Children.RemoveAt(dockPanel.Children.Count - 1);
+                selectFileButton.Visibility = Visibility.Visible;
+                selectFileButton.IsEnabled = true;
                 MessageBox.Show(ex.ToString(), "Error", MessageBoxButton.OK);
             }
         }

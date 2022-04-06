@@ -99,7 +99,8 @@ namespace IncludeGraphGen
                 {
                     possible_node.IncludedBy.Add(this);
                     Nodes.Add(nonLocalFilename, possible_node);
-                } else
+                }
+                else
                 {
                     var new_node = new IncludeGraphNode(fileName, this, true);
                     graph.Nodes.Add(nonLocalFilename, new_node);
@@ -149,7 +150,8 @@ namespace IncludeGraphGen
                     throw new ArgumentException("Filename was null");
                 if (System.IO.File.GetAttributes(filename) == System.IO.FileAttributes.Directory)
                     continue;
-                var normalized = new Uri(filename);
+                var normalized = new Uri(filename, UriKind.RelativeOrAbsolute);
+
                 var workingdir = System.IO.Path.GetDirectoryName(filename);
                 if (workingdir == null)
                     throw new ArgumentException($"Can't find the directory of {filename}");
