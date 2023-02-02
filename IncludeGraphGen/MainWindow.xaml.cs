@@ -122,19 +122,28 @@ namespace IncludeGraphGen
             if (graph == null || cmakeProject == null || g_viewer == null) return;
             var dlg = new SaveFileDialog()
             {
-                Filter = "Image files (*.jpg)|*.jpg",
-                DefaultExt = ".jpg"
+                Filter = "Image files (*.jpg;*.svg)|*.jpg;*.svg",
+                FilterIndex = 0
             };
 
             var res = dlg.ShowDialog();
             if (res != null && res.Value)
             {
-                Microsoft.Msagl.GraphViewerGdi.GraphRenderer renderer = new(g_viewer.Graph);
-                renderer.CalculateLayout();
-                using Bitmap bitmap = new((int)g_viewer.Graph.Width, (int)g_viewer.Graph.Height, PixelFormat.Format32bppPArgb);
-                bitmap.SetResolution((float)g_viewer.DpiX, (float)g_viewer.DpiY);
-                renderer.Render(bitmap);
-                bitmap.Save(dlg.FileName);
+                var filename = dlg.FileName;
+                if (filename.EndsWith(".jpg"))
+                {
+                    Microsoft.Msagl.GraphViewerGdi.GraphRenderer renderer = new(g_viewer.Graph);
+                    renderer.CalculateLayout();
+                    using Bitmap bitmap = new((int)g_viewer.Graph.Width, (int)g_viewer.Graph.Height, PixelFormat.Format32bppPArgb);
+                    bitmap.SetResolution((float)g_viewer.DpiX, (float)g_viewer.DpiY);
+                    renderer.Render(bitmap);
+                    bitmap.Save(dlg.FileName);
+                } else if (filename.EndsWith(".svg"))
+                {
+                    Microsoft.Msagl.GraphViewerGdi.GraphRenderer renderer = new(g_viewer.Graph);
+                    renderer.CalculateLayout();
+                    Microsoft.Msagl.Drawing.SvgGraphWriter.Write(g_viewer.Graph, filename, a => { return a; }, a => { return a; }, 3);
+                }
             }
 
         }
