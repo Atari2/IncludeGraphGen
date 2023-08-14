@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics;
 
 namespace IncludeGraphGen
 {
@@ -31,9 +32,11 @@ namespace IncludeGraphGen
         public Dictionary<Uri, IncludeGraphNode> Nodes { get; set; }
         public HashSet<IncludeGraphNode> IncludedBy { get; set; }
         public bool NonLocal { get; set; }
+        public List<string> IncludePaths { get; set; }
 
-        public IncludeGraphNode(string filename, IncludeGraphNode? parent, bool nonlocal)
+        public IncludeGraphNode(string filename, IncludeGraphNode? parent, bool nonlocal, List<string> includePaths)
         {
+            IncludePaths = includePaths;
             var normalizedFilename = new Uri(System.IO.Path.GetFullPath(filename));
             Nodes = new Dictionary<Uri, IncludeGraphNode>();
             IncludedBy = new HashSet<IncludeGraphNode>(new GraphNodeComparer());
@@ -83,8 +86,14 @@ namespace IncludeGraphGen
 
         public async Task PopulateNodes(IncludeGraph graph)
         {
-            if (System.IO.File.GetAttributes(Name) == System.IO.FileAttributes.Directory)
-                return;
+            try
+            {
+                if (System.IO.File.GetAttributes(Name) == System.IO.FileAttributes.Directory)
+                    return;
+            } catch (Exception ex)
+            {
+                Debug.WriteLine(ex.ToString());
+            }
             var lines = await System.IO.File.ReadAllTextAsync(Name);
             var rx = new Regex(@"#include ""(.+)""", RegexOptions.Compiled);
             var nonLocalRx = new Regex(@"#include <(.+)>", RegexOptions.Compiled);
@@ -102,7 +111,7 @@ namespace IncludeGraphGen
                 }
                 else
                 {
-                    var new_node = new IncludeGraphNode(fileName, this, true);
+                    var new_node = new IncludeGraphNode(fileName, this, true, IncludePaths);
                     graph.Nodes.Add(nonLocalFilename, new_node);
                     Nodes.Add(nonLocalFilename, new_node);
                 }
@@ -110,7 +119,14 @@ namespace IncludeGraphGen
 
             foreach (Match match in matches)
             {
-                var full_filename = System.IO.Path.GetFullPath(System.IO.Path.Combine(OriginDir, match.Groups[1].Value));
+                var partial_filename = match.Groups[1].Value;
+                var full_filename = System.IO.Path.GetFullPath(System.IO.Path.Combine(OriginDir, partial_filename));
+                var i = 0;
+                while (!System.IO.File.Exists(full_filename) && i < IncludePaths.Count)
+                {
+                    full_filename = System.IO.Path.GetFullPath(System.IO.Path.Combine(IncludePaths[i], partial_filename));
+                    i++;
+                }
                 var normalized = new Uri(full_filename);
                 // check if a file is included twice
                 if (Nodes.ContainsKey(normalized))
@@ -123,7 +139,7 @@ namespace IncludeGraphGen
                 }
                 else
                 {
-                    var new_node = new IncludeGraphNode(full_filename, this, false);
+                    var new_node = new IncludeGraphNode(full_filename, this, false, IncludePaths);
                     await new_node.PopulateNodes(graph);
                     graph.Nodes.Add(normalized, new_node);
                     Nodes.Add(normalized, new_node);
@@ -142,7 +158,7 @@ namespace IncludeGraphGen
 
         }
 
-        public async Task Init(List<string> filenames)
+        public async Task Init(List<string> filenames, List<string> includePaths)
         {
             foreach (var filename in filenames)
             {
@@ -159,7 +175,7 @@ namespace IncludeGraphGen
                 var node = Find(normalized);
                 if (node == null)
                 {
-                    node = new IncludeGraphNode(filename, null, false);
+                    node = new IncludeGraphNode(filename, null, false, includePaths);
                     Nodes.Add(normalized, node);
                     await node.PopulateNodes(this);
                 }

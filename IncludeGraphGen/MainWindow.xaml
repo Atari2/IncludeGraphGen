@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:IncludeGraphGen" xmlns:wpfgraphcontrol="http://mlsagl"
         mc:Ignorable="d"
-        Title="Include Graph Generator" Height="450" Width="800">
+        Title="Include Graph Generator" Height="450" Width="800" Closing="Window_Closing">
     <Window.Resources>
         <ContextMenu x:Key="cmGraphNode">
             <MenuItem Header="Open file in Explorer..." Click="OpenFileExplorer"/>
@@ -17,8 +17,18 @@
         <ContextMenu x:Key="cmSaveContextMenu">
             <MenuItem Header="Save graph to image" Click="SaveToImage"/>
         </ContextMenu>
+        <local:SearchWindow x:Key="wFindBox"/>
     </Window.Resources>
     <DockPanel x:Name="dockPanel" LastChildFill="True">
         <Button DockPanel.Dock="Top" x:Name="selectFileButton" Content="Select CMakeLists file."/>
     </DockPanel>
+    <Window.InputBindings>
+        <KeyBinding Command="ApplicationCommands.Find"
+       Gesture="CTRL+F" />
+    </Window.InputBindings>
+    <Window.CommandBindings>
+        <CommandBinding Command="{x:Static ApplicationCommands.Find}"
+                    Executed="ExecutedFindCommand"
+                    CanExecute="CanExecuteFindCommand" />
+    </Window.CommandBindings>
 </Window>

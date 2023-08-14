@@ -17,17 +17,24 @@ namespace IncludeGraphGen
 project(IncludeGraphGenBoilerplate)
 add_subdirectory({0})
 get_target_property(MAYBE_SOURCE_FILES {1} SOURCES)
+get_target_property(MAYBE_INCLUDE_DIRECTORY {1} INCLUDE_DIRECTORIES)
 message(STATUS ""BEGIN SOURCES OUTPUT"")
 foreach(fil ${{MAYBE_SOURCE_FILES}})
     message(STATUS ${{fil}})
 endforeach()
 message(STATUS ""END SOURCES OUTPUT"")
+message(STATUS ""BEGIN INCLUDE_DIRECTORIES OUTPUT"")
+foreach (dir ${{MAYBE_INCLUDE_DIRECTORY}})
+    message(STATUS ${{dir}})
+endforeach()
+message(STATUS ""END INCLUDE_DIRECTORIES OUTPUT"")
 ";
         public string OriginalDirectory;
         public string DestinationDir;
         string FormattedBoilerPlate;
         string ProjectName;
         public List<string> Sources;
+        public List<string> IncludePaths;
         public CMakeProject()
         {
             OriginalDirectory = "";
@@ -35,6 +42,7 @@ message(STATUS ""END SOURCES OUTPUT"")
             FormattedBoilerPlate = "";
             ProjectName = "";
             Sources = new List<string>();
+            IncludePaths = new List<string>();
         }
 
         public async Task Init(string cmakefilepath)
@@ -132,6 +140,7 @@ message(STATUS ""END SOURCES OUTPUT"")
             var real_output = output.ToString();
 
             bool in_source_output = false;
+            bool in_include_directories_output = false;
 
             foreach (var line in real_output.Split('\n'))
             {
@@ -146,6 +155,18 @@ message(STATUS ""END SOURCES OUTPUT"")
                 if (line.Contains("BEGIN SOURCES OUTPUT"))
                 {
                     in_source_output = true;
+                }
+                if (line.Contains("END INCLUDE_DIRECTORIES OUTPUT"))
+                {
+                    in_include_directories_output = false;
+                }
+                if (in_include_directories_output)
+                {
+                    IncludePaths.Add(line.Split(' ').Last());
+                }
+                if (line.Contains("BEGIN INCLUDE_DIRECTORIES OUTPUT"))
+                {
+                    in_include_directories_output = true;
                 }
             }
         }

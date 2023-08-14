@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Drawing.Imaging;
+using System.Windows.Input;
 
 namespace IncludeGraphGen
 {
@@ -16,7 +17,7 @@ namespace IncludeGraphGen
     /// </summary>
     public partial class MainWindow : Window
     {
-        Microsoft.Msagl.WpfGraphControl.GraphViewer? g_viewer;
+        public Microsoft.Msagl.WpfGraphControl.GraphViewer? g_viewer;
         Microsoft.Msagl.WpfGraphControl.VNode? selected_node;
         CMakeProject? cmakeProject;
         IncludeGraph? graph;
@@ -25,13 +26,28 @@ namespace IncludeGraphGen
         {
             InitializeComponent();
             selectFileButton.Click += SelectFileButton_Click;
+
         }
 
-        private static async Task<IncludeGraph> CreateIncludeGraph(List<string> filenames)
+        private static async Task<IncludeGraph> CreateIncludeGraph(List<string> filenames, List<string> includePaths)
         {
             var graph = new IncludeGraph();
-            await graph.Init(filenames);
+            await graph.Init(filenames, includePaths);
             return graph;
+        }
+
+        private void CanExecuteFindCommand(object sender, CanExecuteRoutedEventArgs e)
+        {
+            e.CanExecute = true;
+        }
+
+        private void ExecutedFindCommand(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (FindResource("wFindBox") is SearchWindow w)
+            {
+                w.Visibility = Visibility.Visible;
+                w.parentWindow = this;
+            }
         }
 
         private async void SelectFileButton_Click(object sender, RoutedEventArgs e)
@@ -55,7 +71,7 @@ namespace IncludeGraphGen
                 await cmakeProject.Init(filename);
                 var prevCurrDir = Directory.GetCurrentDirectory();
                 Directory.SetCurrentDirectory(cmakeProject.DestinationDir);
-                graph = await CreateIncludeGraph(cmakeProject.Sources);
+                graph = await CreateIncludeGraph(cmakeProject.Sources, cmakeProject.IncludePaths);
                 Directory.SetCurrentDirectory(prevCurrDir);
                 var w_graph = new Microsoft.Msagl.Drawing.Graph("graph");
                 w_graph.Attr.LayerDirection = Microsoft.Msagl.Drawing.LayerDirection.LR;
@@ -256,6 +272,15 @@ namespace IncludeGraphGen
                 pane.Children.Add(btn);
             }
             main.Show();
+        }
+
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (FindResource("wFindBox") is SearchWindow w)
+            {
+                w.isParentCommand = true;
+                w.Close();
+            }
         }
     }
 }
