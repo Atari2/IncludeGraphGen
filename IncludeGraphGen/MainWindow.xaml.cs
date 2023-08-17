@@ -106,7 +106,14 @@ namespace IncludeGraphGen
                 dockPanel.Children.RemoveAt(dockPanel.Children.Count - 1);
                 selectFileButton.Visibility = Visibility.Visible;
                 selectFileButton.IsEnabled = true;
-                MessageBox.Show(ex.ToString(), "Error", MessageBoxButton.OK);
+                if (ex is CMakeProjectCreationException || ex is IncludeGraphCreationException)
+                {
+                    MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK);
+                }
+                else
+                {
+                    MessageBox.Show(ex.ToString(), "Unexpected error", MessageBoxButton.OK);
+                }
             }
         }
 

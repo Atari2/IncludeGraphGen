@@ -10,6 +10,10 @@ using System.Threading;
 
 namespace IncludeGraphGen
 {
+    class CMakeProjectCreationException : Exception
+    {
+        public CMakeProjectCreationException(string message) : base(message) { }
+    }
     internal class CMakeProject
     {
         private const string BoilerPlate =
@@ -51,14 +55,14 @@ message(STATUS ""END INCLUDE_DIRECTORIES OUTPUT"")
             var re = new Regex(@"(add_executable\(\s*(\S+))|(add_library\(\s*(\S+))", RegexOptions.Compiled);
             var matches = re.Matches(content);
             if (matches.Count == 0)
-                throw new ArgumentException("Project declaration not found in CMake file");
+                throw new CMakeProjectCreationException("Project declaration not found in CMake file");
             if (matches[0].Groups[2].Success)
                 ProjectName = matches[0].Groups[2].Value;
             else
                 ProjectName = matches[0].Groups[4].Value;
             var dirName = Path.GetDirectoryName(cmakefilepath);
             if (dirName == null)
-                throw new ArgumentException("Invalid path");
+                throw new CMakeProjectCreationException("Invalid path");
             string endingDirName = dirName[(dirName.LastIndexOf(Path.DirectorySeparatorChar) + 1)..];
             FormattedBoilerPlate = string.Format(BoilerPlate, endingDirName, ProjectName);
             OriginalDirectory = dirName;
@@ -75,7 +79,7 @@ message(STATUS ""END INCLUDE_DIRECTORIES OUTPUT"")
         {
             var dir = Directory.GetParent(DestinationDir);
             if (dir == null)
-                throw new Exception($"Invalid path {DestinationDir}");
+                throw new CMakeProjectCreationException($"Invalid path {DestinationDir}");
             var cmd = new ProcessStartInfo() {
                 WorkingDirectory = dir.FullName,
                 FileName = "cmake",
@@ -128,11 +132,11 @@ message(STATUS ""END INCLUDE_DIRECTORIES OUTPUT"")
                     var status = proc.ExitCode;
                     if (status != 0)
                     {
-                        throw new Exception($"CMake failed to execute correctly\n{error}");
+                        throw new CMakeProjectCreationException($"CMake failed to execute correctly\n{error}");
                     }
                 } else
                 {
-                    throw new Exception("CMake process timed out");
+                    throw new CMakeProjectCreationException("CMake process timed out");
                 }
             }
 

@@ -7,6 +7,10 @@ using System.Diagnostics;
 
 namespace IncludeGraphGen
 {
+    class IncludeGraphCreationException : Exception
+    {
+        public IncludeGraphCreationException(string message) : base(message) { }
+    }
 
     internal class GraphNodeComparer : IEqualityComparer<IncludeGraphNode>
     {
@@ -47,15 +51,15 @@ namespace IncludeGraphGen
             Name = normalizedFilename.AbsolutePath;
             var origin_dir = System.IO.Path.GetDirectoryName(Name);
             if (origin_dir == null)
-                throw new Exception($"Invalid path {Name}");
+                throw new IncludeGraphCreationException($"Invalid path {Name}");
             OriginDir = origin_dir;
             NonLocal = nonlocal;
         }
 
         public IncludeGraphNode? Find(Uri filename)
         {
-            if (Nodes.ContainsKey(filename))
-                return Nodes[filename];
+            if (Nodes.TryGetValue(filename, out var foundNode))
+                return foundNode;
             else
             {
                 foreach (var node in Nodes)
@@ -86,14 +90,8 @@ namespace IncludeGraphGen
 
         public async Task PopulateNodes(IncludeGraph graph)
         {
-            try
-            {
-                if (System.IO.File.GetAttributes(Name) == System.IO.FileAttributes.Directory)
-                    return;
-            } catch (Exception ex)
-            {
-                Debug.WriteLine(ex.ToString());
-            }
+            if (System.IO.File.GetAttributes(Name) == System.IO.FileAttributes.Directory)
+                return;
             var lines = await System.IO.File.ReadAllTextAsync(Name);
             var rx = new Regex(@"#include ""(.+)""", RegexOptions.Compiled);
             var nonLocalRx = new Regex(@"#include <(.+)>", RegexOptions.Compiled);
@@ -140,9 +138,9 @@ namespace IncludeGraphGen
                 else
                 {
                     var new_node = new IncludeGraphNode(full_filename, this, false, IncludePaths);
-                    await new_node.PopulateNodes(graph);
                     graph.Nodes.Add(normalized, new_node);
                     Nodes.Add(normalized, new_node);
+                    await new_node.PopulateNodes(graph);
                 }
             }
 
@@ -163,14 +161,14 @@ namespace IncludeGraphGen
             foreach (var filename in filenames)
             {
                 if (filename == null)
-                    throw new ArgumentException("Filename was null");
+                    throw new IncludeGraphCreationException("Filename was null");
                 if (System.IO.File.GetAttributes(filename) == System.IO.FileAttributes.Directory)
                     continue;
                 var normalized = new Uri(filename, UriKind.RelativeOrAbsolute);
 
                 var workingdir = System.IO.Path.GetDirectoryName(filename);
                 if (workingdir == null)
-                    throw new ArgumentException($"Can't find the directory of {filename}");
+                    throw new IncludeGraphCreationException($"Can't find the directory of {filename}");
 
                 var node = Find(normalized);
                 if (node == null)
@@ -186,17 +184,14 @@ namespace IncludeGraphGen
         {
             if (Nodes.Count == 0)
                 return null;
-            if (Nodes.ContainsKey(filename)) return Nodes[filename];
+            if (Nodes.TryGetValue(filename, out var foundNode))
+            {
+                return foundNode;
+            }
             else
             {
-                foreach (var node in Nodes.Values)
-                {
-                    var maybe_node = node.Find(filename);
-                    if (maybe_node != null)
-                        return maybe_node;
-                }
+                return null;
             }
-            return null;
         }
     }
 }
